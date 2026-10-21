@@ -45,6 +45,11 @@ func (g Group) IsFast(id string) bool {
 	return slices.Contains(g.Fast, id)
 }
 
+// IsUltra reports whether this occurrence of the member is sent Ultrafast.
+func (g Group) IsUltra(id string) bool {
+	return g.IsFast(id) && slices.Contains(g.Ultra, id)
+}
+
 // CanFast reports whether model, as p serves it, has a fast mode magpie
 // can ask for: a ChatGPT account's GPT models (Codex's Fast), Cursor's
 // models with a -fast one, an OpenAI key's GPT and o-series models on its
@@ -191,6 +196,23 @@ func cleanFast(entries []Entry, g *Group) error {
 		out = append(out, f)
 	}
 	g.Fast = out
+	if len(g.Ultra) == 0 {
+		return nil
+	}
+	var ultra []string
+	offers := UltraModels()
+	for _, u := range g.Ultra {
+		u = key(u)
+		if !g.IsFast(u) || slices.Contains(ultra, u) {
+			continue
+		}
+		model, _ := memberEffortIn(entries, u)
+		if p, m, ok := resolveIn(entries, model); ok && !UltraOn(p, m, offers) {
+			return fmt.Errorf("%s has no ultrafast mode magpie can ask for", model)
+		}
+		ultra = append(ultra, u)
+	}
+	g.Ultra = ultra
 	return nil
 }
 
@@ -198,6 +220,9 @@ func cleanFast(entries []Entry, g *Group) error {
 // the group.
 func (g *Group) SetMemberFast(id string, fast bool) {
 	g.Fast = slices.DeleteFunc(slices.Clone(g.Fast), func(x string) bool { return x == id })
+	if !fast {
+		g.Ultra = slices.DeleteFunc(slices.Clone(g.Ultra), func(x string) bool { return x == id })
+	}
 	if fast && slices.Contains(g.Members, id) {
 		g.Fast = append(g.Fast, id)
 	}
@@ -223,6 +248,11 @@ func (g *Group) RenameMember(from, to string) {
 	for i, f := range g.Fast {
 		if f == from {
 			g.Fast[i] = to
+		}
+	}
+	for i, u := range g.Ultra {
+		if u == from {
+			g.Ultra[i] = to
 		}
 	}
 	for i, o := range g.Off {

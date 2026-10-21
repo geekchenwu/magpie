@@ -94,7 +94,7 @@ func CanonicalRef(ref string) string {
 // as group/auto-<slug>, so its members, off and fast lists, weights, rules
 // and classifier name it by one id. g's lists are its own (Group.own).
 func (g *Group) canonicalRefs() {
-	for _, l := range [][]string{g.Members, g.Off, g.Fast} {
+	for _, l := range [][]string{g.Members, g.Off, g.Fast, g.Ultra} {
 		for i, v := range l {
 			l[i] = CanonicalRef(v)
 		}

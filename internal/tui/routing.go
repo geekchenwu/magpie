@@ -637,7 +637,9 @@ func (m model) viewGroup() string {
 		if i == m.gsel {
 			marker, name = sCursor.Render("▸ "), sNameOn.Render(id)
 		}
-		if g.IsFast(id) {
+		if g.IsUltra(id) {
+			name += sMuted.Render(" · ultrafast")
+		} else if g.IsFast(id) {
 			name += sMuted.Render(" · fast")
 		}
 		if slices.Contains(g.Matched, id) {

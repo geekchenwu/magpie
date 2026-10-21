@@ -408,7 +408,7 @@ func applyGroupPairs(g *provider.Group, pairs []string, resolve func(string) (st
 			// the whole list, patterns too: what the old ones matched goes
 			g.Members, err = members(v)
 			g.Match, g.Matched = patterns, nil
-			g.Fast = nil // the list as typed: :fast on those sent fast
+			g.Fast, g.Ultra = nil, nil // the list as typed: :fast on those sent fast
 		case "models+", "members+", "model+":
 			var add []string
 			if add, err = members(v); err == nil {
@@ -510,7 +510,7 @@ func applyGroupPairs(g *provider.Group, pairs []string, resolve func(string) (st
 		case "fast":
 			// the members sent in their vendor's fast mode, as they are in
 			// the group
-			g.Fast = nil
+			g.Fast, g.Ultra = nil, nil
 			for _, m := range splitIDs(v, inGroup(g.Members)) {
 				m, _ = provider.MemberFast(m)
 				id, perr := pickMember(g.Members, m)
@@ -1106,7 +1106,9 @@ func showGroup(g provider.Group) error {
 			line = green.Render(fmt.Sprintf("%d %s ●", i+1, typedMember(g, id)))
 		}
 		if l, ok := memberLabel(id, names); ok {
-			if g.IsFast(id) {
+			if g.IsUltra(id) {
+				l += " · ultrafast"
+			} else if g.IsFast(id) {
 				l += " · fast"
 			}
 			if g.Routing == provider.Weighted {

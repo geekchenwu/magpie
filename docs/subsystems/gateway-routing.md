@@ -22,6 +22,30 @@ message digest is not migrated to a newly recognised native id, so the first
 request after upgrading can choose an account anew. Historical usage is not
 backfilled; see [Gateway Session Aggregation](gateway-sessions.md).
 
+## Group member speed
+
+The Routing editor cycles a model through Standard speed, Fast and, when
+`provider.CanUltra` says the model offers it, Ultrafast. `Group.Fast` keeps
+the members sent fast and `Group.Ultra` the subset sent Ultrafast, both
+using the complete member id including its fixed reasoning effort. Saving
+cleans duplicates and removed members, drops Ultra entries outside Fast,
+and rejects a resolved model that cannot offer the selected mode
+([`groupfast.go`](../../internal/provider/groupfast.go)). Changing effort,
+copying a group and renaming a provider preserve the selection. Importing
+onto another provider keeps Fast and drops Ultra when only Fast is offered.
+Older versions ignore `ultra` and continue sending those members Fast.
+
+Speed belongs to each occurrence of a model in a nested group. Default
+deduplication keeps the first occurrence's selection; a rule choosing a
+later group uses that group's selection. The resulting candidate carries
+Ultrafast through Chat, Responses and Anthropic Messages translation.
+ChatGPT account selection and downgrade follow the same policy as an
+agent's Ultrafast pick: prefer an account offering the tier, then use
+priority on an account that does not. The group-level model catalog and
+agent speed preferences are unchanged. See
+[`group_ultra_test.go`](../../internal/gateway/group_ultra_test.go) for
+protocol, account fallback and nested-rule coverage.
+
 ## Responsibilities and sources of truth
 
 | Part | Responsibility | Source |

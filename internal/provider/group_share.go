@@ -175,6 +175,17 @@ func ImportGroup(text string) (Imported, error) {
 	if len(g.Members) == 0 && len(g.Match) == 0 {
 		return res, &ShareError{Why: "none_here", Models: res.Missing}
 	}
+	matched := matchesIn(entries, g)
+	// Sharing leaves pattern members dynamic, but their speed choices
+	// still refer to them. Map those choices only when they match here.
+	for _, m := range append(slices.Clone(g.Fast), g.Ultra...) {
+		m = strings.TrimSpace(m)
+		if _, named := here[m]; !named {
+			if to := memberHere(entries, all, m); slices.Contains(matched, to) {
+				here[m] = to
+			}
+		}
+	}
 	kept := func(list []string) []string {
 		var out []string
 		for _, m := range list {
@@ -190,6 +201,12 @@ func ImportGroup(text string) (Imported, error) {
 		p, id, ok := resolveIn(entries, model)
 		return ok && !CanFast(p, id)
 	})
+	ultra := UltraModels()
+	g.Ultra = slices.DeleteFunc(kept(g.Ultra), func(u string) bool {
+		model, _ := memberEffortIn(entries, u)
+		p, id, ok := resolveIn(entries, model)
+		return !g.IsFast(u) || ok && !UltraOn(p, id, ultra)
+	})
 	g.Weights = renamedWeights(g.Weights, func(m string) string { return here[strings.TrimSpace(m)] })
 	if g.Routing != Manual && len(g.Off) == len(g.Members) {
 		g.Off = nil // the ones it sent to are gone: those left are on
@@ -202,7 +219,7 @@ func ImportGroup(text string) (Imported, error) {
 	}
 	// a rule sends to a model the group names, or one its patterns match
 	// here
-	in := append(slices.Clone(g.Members), matchesIn(entries, g)...)
+	in := append(slices.Clone(g.Members), matched...)
 	var rules []Rule
 	for _, r := range g.Rules {
 		use := here[strings.TrimSpace(r.Use)]

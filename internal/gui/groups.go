@@ -93,8 +93,10 @@ type memberJSON struct {
 	Effort string `json:"effort,omitempty"`
 	// Fast: the group sends it in its vendor's fast mode; CanFast: its
 	// model has one (provider.CanFast)
-	Fast    bool `json:"fast,omitempty"`
-	CanFast bool `json:"canFast,omitempty"`
+	Fast     bool `json:"fast,omitempty"`
+	CanFast  bool `json:"canFast,omitempty"`
+	Ultra    bool `json:"ultra,omitempty"`
+	CanUltra bool `json:"canUltra,omitempty"`
 	// OwnFast: that fast mode is asked of a provider the user added by its
 	// address, which may or may not serve it (provider.OwnFast, #1615)
 	OwnFast bool `json:"ownFast,omitempty"`
@@ -127,7 +129,8 @@ type modelRef struct {
 	Efforts []string `json:"efforts,omitempty"`
 	// CanFast: a group's member of it may be sent in its vendor's fast
 	// mode (provider.CanFast)
-	CanFast bool `json:"canFast,omitempty"`
+	CanFast  bool `json:"canFast,omitempty"`
+	CanUltra bool `json:"canUltra,omitempty"`
 	// OwnFast: asked of a provider the user added by its address, which may
 	// or may not serve it (provider.OwnFast, #1615)
 	OwnFast bool `json:"ownFast,omitempty"`
@@ -241,9 +244,12 @@ func groupsState() groupsJSON {
 		out.Deciders = append(out.Deciders, modelRef{ID: e.ID, Name: e.Name, Provider: e.Provider.ID, PName: e.Provider.Name, Icon: e.Provider.Icon, Sub: e.Provider.Account != nil})
 	}
 	served := provider.Served()
+	ultra := provider.UltraModels()
 	for _, e := range served {
 		if e.Group == "" {
-			out.Models = append(out.Models, servedRef(e))
+			m := servedRef(e)
+			m.CanUltra = provider.UltraOn(e.Provider, e.Model, ultra)
+			out.Models = append(out.Models, m)
 		}
 	}
 	// every provider's models read once for the groups, not once a group
@@ -311,6 +317,8 @@ func groupsState() groupsJSON {
 				m.CanFast = provider.CanFast(p, model)
 				m.OwnFast = m.CanFast && provider.OwnFast(p, model)
 				m.Fast = m.CanFast && g.IsFast(id)
+				m.CanUltra = provider.UltraOn(p, model, ultra)
+				m.Ultra = m.Fast && g.IsUltra(id)
 				for _, e := range served {
 					if e.Group == "" && e.Provider.ID == p.ID && e.Model == model {
 						m.Context, m.Images, m.ImagesUnknown = e.Context, seesImages(e), imagesUnknown(e)
